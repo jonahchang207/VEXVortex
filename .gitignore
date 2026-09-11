@@ -1,0 +1,66 @@
+# VEXVortex — safe defaults. Never commit real secrets.
+# See .env.example for the documented template.
+
+# Secrets & local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+*service_role*
+*tunnel*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*~
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Node / TS (admin app + display)
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Python (tooling/scripts)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Docker / Supabase self-host data (never commit live state)
+data/
+volumes/
+*.dump
+*.sql.gz
+supabase/volumes/
+supabase/docker/volumes/
+
+# Backups & images (live state stays off git)
+backups/
+*.bak
+*.backup
+*.img
+*.iso
+
+# Logs & temp
+logs/
+*.log
+tmp/
+temp/
