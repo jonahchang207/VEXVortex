@@ -2,17 +2,15 @@
 
 ## Mission
 
-VEXVortex is a self-hosted backend appliance for personal applications. It runs on a wiped 2019 Intel MacBook Air with Debian 13 stable, Docker Compose, self-hosted Supabase-compatible services, Tailscale-only administration, and a local fullscreen operations display.
+VEXVortex is a VEX Robotics stats application: native iOS client, Supabase backend (Postgres + RLS, Auth, REST/Data API, Edge Functions, Storage), shipped with Codemagic. Self-hosting / homelab appliance work is a separate project and does not live in this repo.
 
 ## Non-negotiable safety rules
 
-- Do not expose PostgreSQL, Docker, Supabase Studio, the admin app, SSH, or Tailscale administration to the public internet.
-- Do not require router port forwarding. Prefer outbound-only connectivity through Tailscale and, only when needed, Cloudflare Tunnel or a narrowly scoped public HTTPS endpoint.
+- Never place Supabase `service_role`, database passwords, Apple signing keys/profiles, App Store Connect API keys, or Codemagic secrets in Git, client code, logs, screenshots, or public environment variables.
 - Never trust `Origin`, `Referer`, User-Agent, client IP, or an app name as proof that a request came from an approved application.
-- Never place Supabase `service_role`, database passwords, tunnel tokens, SSH private keys, or Tailscale auth keys in Git, browser code, logs, screenshots, or public environment variables.
 - Preserve RLS as a defense boundary. Do not solve authorization problems with broad grants or `SECURITY DEFINER` functions.
-- Every destructive action—wiping disks, deleting data, resetting volumes, rotating credentials, applying migrations, or changing firewall rules—must require an explicit confirmation and have a documented rollback/backup path.
-- Security tests must be non-destructive, rate-limited, scoped to this server and its containers, and must not scan unrelated home-network devices.
+- Every destructive action—deleting data, resetting volumes, rotating credentials, applying migrations, or changing auth policies—must require an explicit confirmation and have a documented rollback/backup path.
+- Security tests must be non-destructive, rate-limited, scoped to this project and its containers, and must not scan unrelated home-network devices.
 
 ## Working method
 
@@ -25,13 +23,10 @@ VEXVortex is a self-hosted backend appliance for personal applications. It runs 
 
 ## Architecture defaults
 
-- OS: Debian 13 stable (`amd64`), minimal install, encrypted disk where practical.
-- Runtime: Docker Engine/Compose with pinned image tags; rootless Docker is preferred when compatible with the required services.
-- Data: internal SSD for live data; encrypted rotating backups on the 250 GB flash drive. Treat the flash drive as a backup target, not the only copy.
-- Network: default-deny host firewall; Tailscale for admin access; public access only to explicitly required HTTPS application routes.
-- Supabase: use the official self-hosted Docker Compose distribution, pinned to a known release. Remember that self-hosted Supabase is a single project and does not provide the managed platform's branching, managed backups, or platform API.
-- Admin: custom Tailscale-only web app; SSH remains the only terminal access path.
-- Display: dedicated fullscreen local dashboard with no browser chrome, no desktop workflow, and automatic restart.
+- Client: native iOS (Swift/SwiftUI) in `ios/`. No secrets beyond the Supabase `anon` key in the bundle; `service_role` never ships.
+- Backend: managed Supabase — Postgres + RLS, Auth, REST/Data API, Edge Functions, Storage. Migrations and policies live in `supabase/`.
+- Ship: Codemagic via `codemagic.yaml` — signed iOS builds, TestFlight/App Store tracks, secrets in Codemagic variables only.
+- Data: upstream VEX event data ingested server-side (Edge Functions/jobs), validated, served read-mostly to clients with cached/offline reads and stale indicators.
 
 ## Supabase-specific rules
 
@@ -44,4 +39,4 @@ VEXVortex is a self-hosted backend appliance for personal applications. It runs 
 
 ## Definition of done
 
-The system must survive reboot, temporary network loss, Docker service failure, and a failed backup without silently losing data. It must provide tested restore procedures, visible health status, auditable admin actions, and a clear migration path from the user's managed Supabase projects.
+Stats screens show no fake data, every number links to its source, offline/cached reads carry stale indicators, RLS negative cases pass, Codemagic dev build is green, and secrets appear in none of the artifacts.

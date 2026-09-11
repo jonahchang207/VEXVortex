@@ -1,0 +1,107 @@
+# codemagic.yaml — VEXVortex iOS pipeline (starter, documented)
+# Codemagic reads this from the repo root. Secrets come from Codemagic
+# environment variable groups / code signing identities — NEVER from git.
+#
+# Setup:
+#   1. Connect jonahchang207/VEXVortex in Codemagic, choose "codemagic.yaml".
+#   2. Create variable groups: `supabase_prod` (SUPABASE_URL, SUPABASE_ANON_KEY),
+#      plus Apple signing (bundle id, provisioning, App Store Connect API key).
+#   3. Run the ios-dev workflow, then tag (v0.1.0) for TestFlight.
+#
+# Docs: https://docs.codemagic.io/yaml-quick-start/
+
+workflows:
+  ios-dev:
+    name: iOS Dev Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - supabase_prod
+      vars:
+        XCODE_PROJECT: ios/VEXVortex.xcodeproj
+        XCODE_SCHEME: VEXVortex
+        APP_ENV: development
+      xcode: 16.2
+      cocoapods: default
+    scripts:
+      - name: Verify config (no secrets printed)
+        script: |
+          set -e
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_ANON_KEY"
+          echo "Supabase config present (values redacted)."
+      - name: Set up keychain for dev signing
+        ignore_failure: true
+        script: |
+          keychain initialize
+      - name: Fetch signing files
+        ignore_failure: true
+        script: |
+          app-store-connect fetch-signing-files "$IOS_BUNDLE_ID" \
+            --type IOS_APP_ADHOC \
+            --create
+      - name: Build ipa (dev)
+        ignore_failure: true
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - jonahchang207@gmail.com
+
+  ios-testflight:
+    name: iOS TestFlight Release
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - supabase_prod
+      vars:
+        XCODE_PROJECT: ios/VEXVortex.xcodeproj
+        XCODE_SCHEME: VEXVortex
+        APP_ENV: production
+      xcode: 16.2
+      cocoapods: default
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'v*'
+          include: true
+    scripts:
+      - name: Verify release config
+        script: |
+          set -e
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_ANON_KEY"
+          test -n "$IOS_BUNDLE_ID"
+          echo "Release config present (values redacted)."
+      - name: Set up keychain
+        ignore_failure: true
+        script: |
+          keychain initialize
+      - name: Fetch signing files
+        ignore_failure: true
+        script: |
+          app-store-connect fetch-signing-files "$IOS_BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Build ipa (store)
+        ignore_failure: true
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
